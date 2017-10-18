@@ -29,8 +29,8 @@ import java.util.StringTokenizer;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.reporting.AbstractMavenReport;
 import org.apache.maven.reporting.MavenReportException;
-import org.codehaus.doxia.sink.Sink;
-import org.codehaus.doxia.site.renderer.SiteRenderer;
+import org.apache.maven.doxia.sink.Sink;
+import org.apache.maven.doxia.siterenderer.DefaultSiteRenderer;
 import org.codehaus.plexus.util.DirectoryScanner;
 import org.codehaus.plexus.util.cli.CommandLineException;
 import org.codehaus.plexus.util.cli.CommandLineUtils;
@@ -68,7 +68,7 @@ public class ReportMojo extends AbstractMavenReport {
      * @required
      * @readonly
      */
-    private SiteRenderer siteRenderer;
+    private DefaultSiteRenderer siteRenderer;
 
     /**
      * PO directory.
@@ -181,7 +181,7 @@ public class ReportMojo extends AbstractMavenReport {
 		return project;
 	}
 
-	protected SiteRenderer getSiteRenderer()
+	protected DefaultSiteRenderer getSiteRenderer()
 	{
 		return siteRenderer;
 	}
