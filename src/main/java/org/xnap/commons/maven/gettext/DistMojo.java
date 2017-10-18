@@ -39,7 +39,7 @@ public class DistMojo
     /**
      * The msgcat command.
      * @parameter expression="${msgcatCmd}" default-value="msgcat"
-     * @required 
+     * @required
      */
     protected String msgcatCmd;
     
