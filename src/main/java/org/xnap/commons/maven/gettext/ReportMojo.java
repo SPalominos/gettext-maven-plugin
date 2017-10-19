@@ -60,8 +60,7 @@ public class ReportMojo extends AbstractMavenReport {
 	@Parameter(defaultValue = "msgfmt", required = true)
     protected String msgfmtCmd;
 
-	protected void executeReport(Locale locale) throws MavenReportException
-	{
+	protected void executeReport(Locale locale) throws MavenReportException {
         Sink sink = getSink();
 
         sink.head();
@@ -81,8 +80,7 @@ public class ReportMojo extends AbstractMavenReport {
         sink.close();
 	}
 	
-	private void createReport(Sink sink, Stats stats)
-	{
+	private void createReport(Sink sink, Stats stats) {
         sink.section1();
         sink.sectionTitle1();
         sink.text("Gettext Statistics");
@@ -147,10 +145,8 @@ public class ReportMojo extends AbstractMavenReport {
 		return "gettext-report";
 	}
 
-	public Stats gatherStats()
-	{
-		getLog().info("Gathering statistics for po files in '" 
-				+ poDirectory.getAbsolutePath() + "'.");
+	public Stats gatherStats() {
+		getLog().info("Gathering statistics for po files in '" + poDirectory.getAbsolutePath() + "'.");
 		
 		DirectoryScanner ds = new DirectoryScanner();
 		ds.setBasedir(poDirectory);
@@ -191,8 +187,7 @@ public class ReportMojo extends AbstractMavenReport {
 		return stats;
 	}
 	
-	public static Locale getLocale(File file)
-	{
+	public static Locale getLocale(File file) {
 		String basename =  file.getName().substring(0, file.getName().lastIndexOf('.'));
 		if (basename.contains("_")) {
 			StringTokenizer t = new StringTokenizer(basename, "_");

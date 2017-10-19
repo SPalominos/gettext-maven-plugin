@@ -43,8 +43,7 @@ public class MergeMojo extends AbstractGettextMojo {
     @Parameter(defaultValue = "msgmerge", required = true)
     protected String msgmergeCmd;
     
-    public void execute() throws MojoExecutionException
-	{
+    public void execute() throws MojoExecutionException {
 		getLog().info("Invoking msgmerge for po files in '" + poDirectory.getAbsolutePath() + "'.");
 		
 		DirectoryScanner ds = new DirectoryScanner();

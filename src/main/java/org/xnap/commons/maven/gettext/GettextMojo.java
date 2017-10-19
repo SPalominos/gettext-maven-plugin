@@ -57,7 +57,13 @@ public class GettextMojo extends AbstractGettextMojo {
      * The xgettext command.
      */
 	@Parameter(defaultValue = "xgettext", required = true)
-    protected String xgettextCmd;
+	protected String xgettextCmd;
+
+	/**
+	 *
+	 */
+	@Parameter(defaultValue = "**/*.java", required = true)
+	protected String[] includes;
     
     /**
      * An optional set of source files that should be parsed with xgettext.
@@ -76,8 +82,7 @@ public class GettextMojo extends AbstractGettextMojo {
 	@Parameter
 	protected FileSet extraSourceFiles;
 
-	public void execute() throws MojoExecutionException
-    {
+	public void execute() throws MojoExecutionException {
 		getLog().info("Invoking xgettext for Java files in '" + sourceDirectory.getAbsolutePath() + "'.");
 
 		Commandline cl = new Commandline();
@@ -90,7 +95,7 @@ public class GettextMojo extends AbstractGettextMojo {
 
     	DirectoryScanner ds = new DirectoryScanner();
     	ds.setBasedir(sourceDirectory);
-    	ds.setIncludes(new String[] {"**/*.java"});
+    	ds.setIncludes(includes);
     	ds.scan();
         String[] files = ds.getIncludedFiles();
         List<String> fileNameList = Collections.emptyList();
