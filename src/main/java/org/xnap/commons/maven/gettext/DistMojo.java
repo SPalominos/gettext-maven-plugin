@@ -1,5 +1,3 @@
-package org.xnap.commons.maven.gettext;
-
 /*
  * Copyright 2001-2005 The Apache Software Foundation.
  *
@@ -15,11 +13,16 @@ package org.xnap.commons.maven.gettext;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.xnap.commons.maven.gettext;
 
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.commons.lang3.LocaleUtils;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.DirectoryScanner;
 import org.codehaus.plexus.util.cli.CommandLineException;
 import org.codehaus.plexus.util.cli.CommandLineUtils;
@@ -27,70 +30,61 @@ import org.codehaus.plexus.util.cli.Commandline;
 import org.codehaus.plexus.util.cli.StreamConsumer;
 
 /**
- * Generates ressource bundles.
+ * Generates resource bundles.
  *
- * @goal dist
- * @phase generate-resources
  * @author Tammo van Lessen
  */
-public class DistMojo
-    extends AbstractGettextMojo {
+@Mojo(name = "dist", defaultPhase = LifecyclePhase.GENERATE_RESOURCES)
+public class DistMojo extends AbstractGettextMojo {
 
     /**
      * The msgcat command.
-     * @parameter expression="${msgcatCmd}" default-value="msgcat"
-     * @required
      */
+	@Parameter(defaultValue = "msgcat", required = true)
     protected String msgcatCmd;
     
     /**
      * The msgfmt command.
-     * @parameter expression="${msgfmtCmd}" default-value="msgfmt"
-     * @required 
      */
+	@Parameter(defaultValue = "msgfmt", required = true)
     protected String msgfmtCmd;
     
     /**
      * The package and file name of the generated class or properties files.
-     * @parameter expression="${targetBundle}"
-     * @required 
      */
+	@Parameter(required = true)
     protected String targetBundle;
     
     /**
      * Output format, can be "class" or "properties".
-     * @parameter expression="${outputFormat}" default-value="class"
-     * @required 
      */
+	@Parameter(defaultValue = "class", required = true)
     protected String outputFormat;
     
     /**
      * Java version. Can be "1" or "2".
-     * @parameter expression="${javaVersion}" default-value="2"
-     * @required
      */
+	@Parameter(defaultValue = "2", required = true)
     protected String javaVersion;
 
     /**
      * The locale of the messages in the source code.
-     * @parameter expression="${sourceLocale}" default-value="en"
-     * @required
      */
+	@Parameter(defaultValue = "en", required = true)
     protected String sourceLocale;
 
-    public void execute()
-        throws MojoExecutionException {
+    public void execute() throws MojoExecutionException {
     	
     	// create output directory if it doesn't exists
     	outputDirectory.mkdirs();
     	
-    	CommandlineFactory cf = null;
+    	CommandlineFactory cf;
 		if ("class".equals(outputFormat)) {
 			cf = new MsgFmtCommandlineFactory();
 		} else if ("properties".equals(outputFormat)) {
 			cf = new MsgCatCommandlineFactory();
 		} else 	
-			throw new MojoExecutionException("Unknown output format: " 
+			throw new MojoExecutionException("Unknown output format: "
 					+ outputFormat + ". Should be 'class' or 'properties'.");
 
 		DirectoryScanner ds = new DirectoryScanner();
@@ -99,33 +93,33 @@ public class DistMojo
     	ds.scan();
     	
     	String[] files = ds.getIncludedFiles();
-    	for (int i = 0; i < files.length; i++) {
-    		getLog().info("Processing " + files[i]);
-    		
-    		File inputFile = new File(poDirectory, files[i]);
-    		File outputFile = cf.getOutputFile(inputFile);
-    		
-    		if (!isNewer(inputFile, outputFile)) {
-    			getLog().info("Not compiling, target is up-to-date: " + outputFile);
-    			continue;
-    		}
-    		
-        	Commandline cl = cf.createCommandline(inputFile);
-    		getLog().debug("Executing: " + cl.toString());
-    		StreamConsumer out = new LoggerStreamConsumer(getLog(), LoggerStreamConsumer.INFO);
-    		StreamConsumer err = new LoggerStreamConsumer(getLog(), LoggerStreamConsumer.WARN);
-        	try {
-    			CommandLineUtils.executeCommandLine(cl, out, err);
-    		} catch (CommandLineException e) {
-    			getLog().error("Could not execute " + cl.getExecutable() + ".", e);
-    		}
-    	}
+		for (String file : files) {
+			getLog().info("Processing " + file);
+
+			File inputFile = new File(poDirectory, file);
+			File outputFile = cf.getOutputFile(inputFile);
+
+			if (!isNewer(inputFile, outputFile)) {
+				getLog().info("Not compiling, target is up-to-date: " + outputFile);
+				continue;
+			}
+
+			Commandline cl = cf.createCommandline(inputFile);
+			getLog().debug("Executing: " + cl.toString());
+			StreamConsumer out = new LoggerStreamConsumer(getLog(), LoggerStreamConsumer.INFO);
+			StreamConsumer err = new LoggerStreamConsumer(getLog(), LoggerStreamConsumer.WARN);
+			try {
+				CommandLineUtils.executeCommandLine(cl, out, err);
+			} catch (CommandLineException e) {
+				getLog().error("Could not execute " + cl.getExecutable() + ".", e);
+			}
+		}
     	
-    	String basepath = targetBundle.replace('.', File.separatorChar);
+    	String basePath = targetBundle.replace('.', File.separatorChar);
     	getLog().info("Creating resource bundle for source locale");
-    	touch(new File(outputDirectory, basepath + "_" + sourceLocale + ".properties"));
+    	touch(new File(outputDirectory, basePath + "_" + sourceLocale + ".properties"));
     	getLog().info("Creating default resource bundle");
-    	touch(new File(outputDirectory, basepath + ".properties"));
+    	touch(new File(outputDirectory, basePath + ".properties"));
     }
     	
     private boolean isNewer(File inputFile, File outputFile) {
@@ -163,7 +157,7 @@ public class DistMojo
     	
     	private String getLocale(File file) {
     		String locale = file.getName().substring(0, file.getName().lastIndexOf('.'));
-    		return GettextUtils.getJavaLocale(locale);
+    		return LocaleUtils.toLocale(locale).toString();
     	}
     	
         public Commandline createCommandline(File file) {
@@ -171,18 +165,18 @@ public class DistMojo
         	cl.setExecutable(msgfmtCmd);
         	
         	if ("2".equals(javaVersion)) {
-        		cl.createArgument().setValue("--java2");
+        		cl.createArg().setValue("--java2");
         	} else {
-        		cl.createArgument().setValue("--java");
+        		cl.createArg().setValue("--java");
         	}
         	
-        	cl.createArgument().setValue("-d");
-        	cl.createArgument().setFile(outputDirectory);
-        	cl.createArgument().setValue("-r");
-        	cl.createArgument().setValue(targetBundle);
-        	cl.createArgument().setValue("-l");
-        	cl.createArgument().setValue(getLocale(file));
-        	cl.createArgument().setFile(file);
+        	cl.createArg().setValue("-d");
+        	cl.createArg().setFile(outputDirectory);
+        	cl.createArg().setValue("-r");
+        	cl.createArg().setValue(targetBundle);
+        	cl.createArg().setValue("-l");
+        	cl.createArg().setValue(getLocale(file));
+        	cl.createArg().setFile(file);
         	getLog().warn(cl.toString());
         	return cl;
         }
@@ -193,9 +187,8 @@ public class DistMojo
     	public File getOutputFile(File input) {
     		String basepath = targetBundle.replace('.', File.separatorChar);
     		String locale = input.getName().substring(0, input.getName().lastIndexOf('.'));
-    		locale = GettextUtils.getJavaLocale(locale);
-        	File target = new File(outputDirectory, basepath + "_" + locale + ".properties");
-        	return target;
+    		locale = LocaleUtils.toLocale(locale).toString();
+			return new File(outputDirectory, basepath + "_" + locale + ".properties");
     	}
     	
     	public Commandline createCommandline(File file) {
@@ -209,11 +202,11 @@ public class DistMojo
        	
         	cl.setExecutable(msgcatCmd);
        	
-        	cl.createArgument().setValue("--no-location");
-        	cl.createArgument().setValue("-p");
-        	cl.createArgument().setFile(file);
-        	cl.createArgument().setValue("-o");
-        	cl.createArgument().setFile(outputFile);
+        	cl.createArg().setValue("--no-location");
+        	cl.createArg().setValue("-p");
+        	cl.createArg().setFile(file);
+        	cl.createArg().setValue("-o");
+        	cl.createArg().setFile(outputFile);
 
         	return cl;
         }

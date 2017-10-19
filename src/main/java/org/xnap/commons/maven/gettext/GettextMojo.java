@@ -1,5 +1,3 @@
-package org.xnap.commons.maven.gettext;
-
 /*
  * Copyright 2001-2005 The Apache Software Foundation.
  *
@@ -15,17 +13,20 @@ package org.xnap.commons.maven.gettext;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.xnap.commons.maven.gettext;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 import org.apache.maven.model.FileSet;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.DirectoryScanner;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.StringUtils;
@@ -35,34 +36,27 @@ import org.codehaus.plexus.util.cli.Commandline;
 import org.codehaus.plexus.util.cli.StreamConsumer;
 
 /**
- * Invokes xgettext to extract messages from source code and store them in the
- * keys.pot file.
- *
- * @goal gettext
- * 
- * @phase generate-resources
+ * Invokes xgettext to extract messages from source code and store them in the keys.pot file.
  */
-public class GettextMojo
-    extends AbstractGettextMojo {
+@Mojo(name = "gettext", defaultPhase = LifecyclePhase.GENERATE_RESOURCES)
+public class GettextMojo extends AbstractGettextMojo {
 	
     /**
      * The encoding of the source Java files. utf-8 is a superset of ascii.
-     * @parameter expression="${encoding}" default-value="utf-8" 
      */
+	@Parameter(defaultValue = "utf-8", required = true)
 	protected String encoding;
 	
     /**
      * The keywords the xgettext parser will look for to extract messages. The default value works with the Gettext Commons library.
-     * @parameter expression="${keywords}" default-value="-ktrc:1c,2 -ktrnc:1c,2,3 -ktr -kmarktr -ktrn:1,2 -k"
-     * @required
      */
+	@Parameter(defaultValue = "-ktrc:1c,2 -ktrnc:1c,2,3 -ktr -kmarktr -ktrn:1,2 -k", required = true)
     protected String keywords;
     
     /**
      * The xgettext command.
-     * @parameter expression="${xgettextCmd}" default-value="xgettext"
-     * @required 
      */
+	@Parameter(defaultValue = "xgettext", required = true)
     protected String xgettextCmd;
     
     /**
@@ -78,31 +72,29 @@ public class GettextMojo
      *    </excludes>
      * </extraSourceFiles>
      * </pre>
-     * @parameter expression="${extraSourceFiles}"
      */
-    protected FileSet extraSourceFiles;
+	@Parameter
+	protected FileSet extraSourceFiles;
 
-	public void execute()
-        throws MojoExecutionException
+	public void execute() throws MojoExecutionException
     {
-		getLog().info("Invoking xgettext for Java files in '" 
-				+ sourceDirectory.getAbsolutePath() + "'.");
-		
+		getLog().info("Invoking xgettext for Java files in '" + sourceDirectory.getAbsolutePath() + "'.");
+
 		Commandline cl = new Commandline();
 		cl.setExecutable(xgettextCmd);
-    	cl.createArgument().setValue("--from-code=" + encoding);
-    	cl.createArgument().setValue("--output=" + new File(poDirectory, keysFile).getAbsolutePath());
-    	cl.createArgument().setValue("--language=Java");
-    	cl.createArgument().setLine(keywords);
+    	cl.createArg().setValue("--from-code=" + encoding);
+    	cl.createArg().setValue("--output=" + new File(poDirectory, keysFile).getAbsolutePath());
+    	cl.createArg().setValue("--language=Java");
+    	cl.createArg().setLine(keywords);
     	cl.setWorkingDirectory(sourceDirectory.getAbsolutePath());
-    	
+
     	DirectoryScanner ds = new DirectoryScanner();
     	ds.setBasedir(sourceDirectory);
     	ds.setIncludes(new String[] {"**/*.java"});
     	ds.scan();
         String[] files = ds.getIncludedFiles();
-        List fileNameList = Collections.emptyList();
-        if (extraSourceFiles.getDirectory() != null) {
+        List<String> fileNameList = Collections.emptyList();
+        if (extraSourceFiles != null && extraSourceFiles.getDirectory() != null) {
         	try {
         		fileNameList = FileUtils.getFileNames(new File(extraSourceFiles.getDirectory()), 
         				StringUtils.join(extraSourceFiles.getIncludes().iterator(), ","), 
@@ -111,16 +103,16 @@ public class GettextMojo
         		throw new MojoExecutionException("error finding extra source files", e);
         	}
         }
-        
+
     	File file = createListFile(files, fileNameList);
     	if (file != null) {
-    	    cl.createArgument().setValue("--files-from=" + file.getAbsolutePath());
+    	    cl.createArg().setValue("--files-from=" + file.getAbsolutePath());
     	} else {
-    	    for (int i = 0; i < files.length; i++) {
-    	        cl.createArgument().setValue(getAbsolutePath(files[i]));
-    	    }
+			for (String f : files) {
+				cl.createArg().setValue(getAbsolutePath(f));
+			}
     	}
-    	
+
     	getLog().debug("Executing: " + cl.toString());
     	StreamConsumer out = new LoggerStreamConsumer(getLog(), LoggerStreamConsumer.INFO);
     	StreamConsumer err = new LoggerStreamConsumer(getLog(), LoggerStreamConsumer.WARN);
@@ -131,21 +123,21 @@ public class GettextMojo
     	}
     }
 
-    private File createListFile(String[] files, List fileList) {
+    private File createListFile(String[] files, List<String> fileList) {
         try {
             File listFile = File.createTempFile("maven", null);
             listFile.deleteOnExit();
             
             BufferedWriter writer = new BufferedWriter(new FileWriter(listFile));
             try {
-                for (int i = 0; i < files.length; i++) {
-                    writer.write(toUnixPath(files[i]));
-                    writer.newLine();
-                }              
-                for (Iterator i = fileList.iterator(); i.hasNext();) {
-                	writer.write(toUnixPath((String) i.next()));
-                	writer.newLine();
-                }
+				for (String file : files) {
+					writer.write(toUnixPath(file));
+					writer.newLine();
+				}
+				for (String file : fileList) {
+					writer.write(toUnixPath(file));
+					writer.newLine();
+				}
             } finally {
                 writer.close();
             }

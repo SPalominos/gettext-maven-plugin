@@ -1,5 +1,3 @@
-package org.xnap.commons.maven.gettext;
-
 /*
  * Copyright 2005 by Steffen Pingel
  *
@@ -15,6 +13,7 @@ package org.xnap.commons.maven.gettext;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.xnap.commons.maven.gettext;
 
 import java.io.File;
 import java.io.StringWriter;
@@ -26,6 +25,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.StringTokenizer;
 
+import org.apache.maven.plugins.annotations.Component;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.reporting.AbstractMavenReport;
 import org.apache.maven.reporting.MavenReportException;
@@ -41,47 +44,20 @@ import org.codehaus.plexus.util.cli.WriterStreamConsumer;
  * Goal that generates a report.
  *
  * @author Steffen Pingel
- *
- * @goal report
- * 
- * @phase process-sources
  */
+@Mojo(name = "report", defaultPhase = LifecyclePhase.PROCESS_SOURCES)
 public class ReportMojo extends AbstractMavenReport {
 
     /**
-     * Specifies the directory where the report will be generated.
-     *
-     * @parameter default-value="${project.reporting.outputDirectory}"
-     * @required
-     */
-    private File outputDirectory;
-
-    /**
-     * @parameter default-value="${project}"
-     * @required
-     * @readonly
-     */
-    private MavenProject project;
-    
-    /**
-     * @component
-     * @required
-     * @readonly
-     */
-    private DefaultSiteRenderer siteRenderer;
-
-    /**
      * PO directory.
-     * @parameter expression="${poDirectory}" default-value="${project.build.sourceDirectory}/main/po"
-     * @required
      */
+	@Parameter(defaultValue = "${project.build.sourceDirectory}/main/po", required = true)
     protected File poDirectory;
 
     /**
-     * @description msgfmt command.
-     * @parameter expression="${msgfmtCmd}" default-value="msgfmt"
-     * @required 
+     * msgfmt command.
      */
+	@Parameter(defaultValue = "msgfmt", required = true)
     protected String msgfmtCmd;
 
 	protected void executeReport(Locale locale) throws MavenReportException
@@ -132,26 +108,26 @@ public class ReportMojo extends AbstractMavenReport {
         
         List items = stats.getItems();
         Collections.sort(items);
-        for (Iterator it = items.iterator(); it.hasNext();) {
-			StatsEntry item = (StatsEntry)it.next();
-	        sink.tableRow();
-	        // name
-	        sink.tableCell();
-	        sink.text(item.getLocale().getDisplayName());
-	        sink.tableCell_();
-	        // translated
-	        sink.tableCell();
-	        sink.text(item.getTranslated() + "");
-	        sink.tableCell_();
-	        // untranslated
-	        sink.tableCell();
-	        sink.text(item.getUntranslated() + "");
-	        sink.tableCell_();
-	        // fuzzy
-	        sink.tableCell();
-	        sink.text(item.getFuzzy() + "");
-	        sink.tableCell_();
-	        sink.tableRow_();			
+		for (Object item : items) {
+			StatsEntry statsEntry = (StatsEntry) item;
+			sink.tableRow();
+			// name
+			sink.tableCell();
+			sink.text(statsEntry.getLocale().getDisplayName());
+			sink.tableCell_();
+			// translated
+			sink.tableCell();
+			sink.text(statsEntry.getTranslated() + "");
+			sink.tableCell_();
+			// untranslated
+			sink.tableCell();
+			sink.text(statsEntry.getUntranslated() + "");
+			sink.tableCell_();
+			// fuzzy
+			sink.tableCell();
+			sink.text(statsEntry.getFuzzy() + "");
+			sink.tableCell_();
+			sink.tableRow_();
 		}
         sink.table_();
 	}
@@ -166,26 +142,11 @@ public class ReportMojo extends AbstractMavenReport {
 		return "Gettext";
 	}
 
-	protected String getOutputDirectory()
-	{
-		return outputDirectory.getAbsolutePath();
-	}
-
 	public String getOutputName()
 	{
 		return "gettext-report";
 	}
 
-	protected MavenProject getProject()
-	{
-		return project;
-	}
-
-	protected DefaultSiteRenderer getSiteRenderer()
-	{
-		return siteRenderer;
-	}
-	
 	public Stats gatherStats()
 	{
 		getLog().info("Gathering statistics for po files in '" 
@@ -199,17 +160,17 @@ public class ReportMojo extends AbstractMavenReport {
 		Stats stats = new Stats();
 		
 		String[] files = ds.getIncludedFiles();
-		for (int i = 0; i < files.length; i++) {
-			File file = new File(poDirectory, files[i]);
+		for (String f : files) {
+			File file = new File(poDirectory, f);
 			getLog().info("Processing " + file.getAbsolutePath());
-			
+
 			Commandline cl = new Commandline();
 			// make sure the output is in english
 			cl.addEnvironment("LC_ALL", "C");
 			cl.setExecutable(msgfmtCmd);
-			cl.createArgument().setValue("--statistics");
-			cl.createArgument().setValue(file.getAbsolutePath());
-			
+			cl.createArg().setValue("--statistics");
+			cl.createArg().setValue(file.getAbsolutePath());
+
 			Writer out = new StringWriter();
 			Writer err = new StringWriter();
 			try {
@@ -219,12 +180,10 @@ public class ReportMojo extends AbstractMavenReport {
 				if (ret == 0) {
 					// for whatever reason the output is written to stderr
 					stats.parseOutput(file, err.toString());
-				}
-				else {
+				} else {
 					getLog().info(err.toString());
 				}
-			} 
-			catch (CommandLineException e) {
+			} catch (CommandLineException e) {
 				getLog().error("Could not execute msgfmt: " + err.toString(), e);
 			}
 		}
@@ -247,7 +206,7 @@ public class ReportMojo extends AbstractMavenReport {
 	
 	private class Stats {
 		
-		private List items = new ArrayList();
+		private List<StatsEntry> items = new ArrayList<StatsEntry>();
 
 		/**
 		 * <code>
@@ -290,13 +249,13 @@ public class ReportMojo extends AbstractMavenReport {
 				try {
 					return Integer.parseInt(t.nextToken());
 				} 
-				catch (NumberFormatException e) { }
+				catch (NumberFormatException ignored) { }
 			}
 			getLog().warn("Could not parse token: " + token);
 			return 0;
 		}
 		
-		public List getItems()
+		public List<StatsEntry> getItems()
 		{
 			return items;
 		}

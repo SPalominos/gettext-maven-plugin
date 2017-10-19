@@ -1,5 +1,3 @@
-package org.xnap.commons.maven.gettext;
-
 /*
  * Copyright 2001-2005 The Apache Software Foundation.
  *
@@ -15,10 +13,15 @@ package org.xnap.commons.maven.gettext;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.xnap.commons.maven.gettext;
 
 import java.io.File;
 
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugins.annotations.Execute;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.DirectoryScanner;
 import org.codehaus.plexus.util.cli.CommandLineException;
 import org.codehaus.plexus.util.cli.CommandLineUtils;
@@ -28,26 +31,21 @@ import org.codehaus.plexus.util.cli.StreamConsumer;
 /**
  * Invokes the gettext:gettext goal and invokes msgmerge to update po files.
  *
- * @goal merge
- * @execute goal="gettext"
- * @phase generate-resources
  * @author Tammo van Lessen
  */
-public class MergeMojo
-    extends AbstractGettextMojo {
+@Mojo(name = "merge", defaultPhase = LifecyclePhase.GENERATE_RESOURCES)
+@Execute(goal = "gettext")
+public class MergeMojo extends AbstractGettextMojo {
 	
     /**
      * The msgmerge command.
-     * @parameter expression="${msgmergeCmd}" default-value="msgmerge"
-     * @required 
      */
+    @Parameter(defaultValue = "msgmerge", required = true)
     protected String msgmergeCmd;
     
-    public void execute()
-        throws MojoExecutionException
-    {
-		getLog().info("Invoking msgmerge for po files in '" 
-				+ poDirectory.getAbsolutePath() + "'.");
+    public void execute() throws MojoExecutionException
+	{
+		getLog().info("Invoking msgmerge for po files in '" + poDirectory.getAbsolutePath() + "'.");
 		
 		DirectoryScanner ds = new DirectoryScanner();
     	ds.setBasedir(poDirectory);
@@ -58,11 +56,11 @@ public class MergeMojo
     		getLog().info("Processing " + files[i]);
     		Commandline cl = new Commandline();
     		cl.setExecutable(msgmergeCmd);
-        	cl.createArgument().setValue("-q");
-        	cl.createArgument().setValue("--backup=numbered");
-        	cl.createArgument().setValue("-U");
-        	cl.createArgument().setFile(new File(poDirectory, files[i]));
-        	cl.createArgument().setValue(new File(poDirectory, keysFile).getAbsolutePath());
+        	cl.createArg().setValue("-q");
+        	cl.createArg().setValue("--backup=numbered");
+        	cl.createArg().setValue("-U");
+        	cl.createArg().setFile(new File(poDirectory, files[i]));
+        	cl.createArg().setValue(new File(poDirectory, keysFile).getAbsolutePath());
         	
         	getLog().debug("Executing: " + cl.toString());
     		StreamConsumer out = new LoggerStreamConsumer(getLog(), LoggerStreamConsumer.INFO);
